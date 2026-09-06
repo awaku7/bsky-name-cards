@@ -773,7 +773,7 @@ def main():
         path = Path(args.file)
         if not path.exists():
             sys.exit(f"Error: file not found: {args.file}")
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
             line = line.strip()
             if line and not line.startswith("#"):
                 handles.append(line)
