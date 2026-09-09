@@ -19,9 +19,9 @@ import requests
 try:
     import cairosvg as _cairosvg
     _HAS_CAIROSVG = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_CAIROSVG = False
-    print("  ⚠ cairosvg not found — butterfly logo will be omitted. Run: pip install cairosvg")
+    print("  WARNING: cairosvg unavailable; butterfly logo will be omitted. Run: pip install cairosvg")
 import qrcode
 from qrcode.image.pil import PilImage as _QRPilImage
 from PIL import Image, ImageDraw, ImageFont
@@ -63,7 +63,7 @@ def _find_inter() -> "Tuple[str, str]":
             try:
                 pdfmetrics.registerFont(TTFont("Inter", path))
                 reg_name = "Inter"
-                print(f"  ✓ Inter Regular: {path}")
+                print(f"  OK Inter Regular: {path}")
                 break
             except Exception:
                 continue
@@ -74,13 +74,13 @@ def _find_inter() -> "Tuple[str, str]":
             try:
                 pdfmetrics.registerFont(TTFont("Inter-Bold", path))
                 bold_name = "Inter-Bold"
-                print(f"  ✓ Inter Bold: {path}")
+                print(f"  OK Inter Bold: {path}")
                 break
             except Exception:
                 continue
 
     if reg_name == "Helvetica":
-        print("  ⚠ Inter not found — using Helvetica. Install Inter from https://rsms.me/inter/")
+        print("  WARNING: Inter not found; using Helvetica. Install Inter from https://rsms.me/inter/")
     return reg_name, bold_name
 
 FONT_EN, FONT_EN_BOLD = _find_inter()   # Latin (@handle, footer text)
@@ -246,7 +246,7 @@ def fetch_profile(handle: str) -> dict:
         data = r.json()
         return {"handle": handle, "avatar_url": data.get("avatar"), "did": data.get("did")}
     except Exception as exc:
-        print(f"  ⚠ @{handle}: {exc}", file=sys.stderr)
+        print(f"  WARNING: @{handle}: {exc}", file=sys.stderr)
         return {"handle": handle, "avatar_url": None, "did": None}
 
 
@@ -336,7 +336,7 @@ def prepare_butterfly() -> "Tuple[Optional[str], float, float]":
             w_px, h_px = img.size
             return pil_to_temp_png(img), w_px / DPI * 25.4, h_px / DPI * 25.4
         except Exception as e:
-            print(f"  ⚠ cairosvg render failed ({e}), falling back to PNG", file=sys.stderr)
+            print(f"  WARNING: cairosvg render failed ({e}); falling back to PNG", file=sys.stderr)
 
     # --- fallback: bundled pre-rendered PNG ---
     if os.path.exists(BUTTERFLY_PNG):
@@ -349,7 +349,7 @@ def prepare_butterfly() -> "Tuple[Optional[str], float, float]":
         w_px, h_px = img.size
         return pil_to_temp_png(img), w_px / DPI * 25.4, h_px / DPI * 25.4
 
-    print("  ⚠ butterfly logo not found (checked SVG and PNG fallback)", file=sys.stderr)
+    print("  WARNING: butterfly logo not found (checked SVG and PNG fallback)", file=sys.stderr)
     return None, 0.0, 0.0
 
 
@@ -631,7 +631,7 @@ def build_pdf(profiles: list, output_path: str,
 
     qr_px = int(QR_SIZE_MM / 25.4 * DPI) if show_qr else 0
 
-    print("\nPreparing avatar images" + (" & QR codes" if show_qr else "") + "…")
+    print("\nPreparing avatar images" + (" & QR codes" if show_qr else "") + "...")
     cards = []
     for p in profiles:
         handle = p["handle"]
@@ -641,7 +641,7 @@ def build_pdf(profiles: list, output_path: str,
         did    = p.get("did")
         qr_tmp = pil_to_temp_png(make_qr_code(handle, qr_px, did)) if show_qr else None
         cards.append((handle, pil_to_temp_png(circ), qr_tmp))
-        print(f"  ✓ @{handle}")
+        print(f"  OK @{handle}")
 
     c     = rl_canvas.Canvas(output_path, pagesize=(PAGE_W, PAGE_H))
     pages = max(1, (len(cards) + PER_PAGE - 1) // PER_PAGE)
@@ -699,7 +699,7 @@ def build_pdf(profiles: list, output_path: str,
         try: os.unlink(butterfly_tmp)
         except OSError: pass
 
-    print(f"\n✅ PDF saved → {output_path}")
+    print(f"\nPDF saved: {output_path}")
     print(f"   {len(cards)} participant + {press_count} PRESS + {blank_count} blank = {total_cards} cards, {pages} page(s)")
 
 
@@ -782,10 +782,10 @@ def main():
     if not handles:
         sys.exit("No handles provided.")
 
-    print(f"Fetching profiles for {len(handles)} handle(s)…")
+    print(f"Fetching profiles for {len(handles)} handle(s)...")
     profiles = []
     for h in handles:
-        print(f"  → @{h}", end=" ", flush=True)
+        print(f"  -> @{h}", end=" ", flush=True)
         prof = fetch_profile(h)
         print("(ok)" if prof["avatar_url"] else "(no avatar)")
         profiles.append(prof)
